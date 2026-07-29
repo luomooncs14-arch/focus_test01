@@ -3696,6 +3696,7 @@
     processAndRenderDashboard();
 }
 
+// 替換後的完整程式碼
 function renderPeriodControls() {
     const container = document.getElementById('periods-container');
     if (!container) return;
@@ -3706,8 +3707,8 @@ function renderPeriodControls() {
             <div style="margin-bottom:8px; display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:12px;">
                 <strong>第 ${idx+1} 次測驗：</strong>
                 名稱：<input type="text" value="${p.name}" onchange="definedPeriods[${idx}].name=this.value" style="width:90px; padding:2px 4px;">
-                開始：<input type="date" value="${p.start}" onchange="definedPeriods[${idx}].start=this.value" style="padding:2px 4px;">
-                結束：<input type="date" value="${p.end}" onchange="definedPeriods[${idx}].end=this.value" style="padding:2px 4px;">
+                開始：<input type="datetime-local" value="${p.start}" onchange="definedPeriods[${idx}].start=this.value" style="padding:2px 4px;">
+                結束：<input type="datetime-local" value="${p.end}" onchange="definedPeriods[${idx}].end=this.value" style="padding:2px 4px;">
                 <button type="button" class="btn-outline" style="padding:2px 6px; color:var(--accent-red); border-color:var(--accent-red);" onclick="definedPeriods.splice(${idx},1); renderPeriodControls();">刪除</button>
             </div>`;
     });
@@ -3722,8 +3723,20 @@ function renderPeriodControls() {
 }
 
 function addPeriodSetting() {
-    const today = new Date().toISOString().split('T')[0];
-    definedPeriods.push({ name: `第${definedPeriods.length+1}次測驗`, start: today, end: today });
+    const now = new Date();
+    // 格式化目前時間為 YYYY-MM-DDTHH:mm (datetime-local 所需格式)
+    const formatDateTime = (date) => {
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    };
+
+    const startTime = formatDateTime(now);
+    
+    // 預設結束時間為 1 小時後
+    const end = new Date(now.getTime() + 60 * 60 * 1000);
+    const endTime = formatDateTime(end);
+
+    definedPeriods.push({ name: `第${definedPeriods.length+1}次測驗`, start: startTime, end: endTime });
     renderPeriodControls();
 }
 
@@ -3737,10 +3750,14 @@ function applyPeriods() {
 function getFilteredRecords() {
     if (selectedPeriodIndex === 'all' || !definedPeriods[selectedPeriodIndex]) return currentAnalRecords;
     const p = definedPeriods[selectedPeriodIndex];
-    const start = new Date(p.start + 'T00:00:00');
-    const end = new Date(p.end + 'T23:59:59');
+    
+    // 將輸入的時間直接解析為 Date 物件（精確到分鐘）
+    const start = new Date(p.start);
+    const end = new Date(p.end);
+    
     return currentAnalRecords.filter(r => {
-        const t = new Date(r.time);
+        // 解析資料中的時間字串，支援 'YYYY/MM/DD HH:mm:ss' 或 'YYYY-MM-DD HH:mm:ss'
+        const t = new Date(r.time.replace(/-/g, '/'));
         return t >= start && t <= end;
     });
 }
@@ -3753,7 +3770,6 @@ function processAndRenderDashboard() {
     renderRankingTable(records);
     renderLineChart();
 }
-
 // 全域變數：記錄當前開啟的等級區間 (用來判斷點擊的是否為同一個區間)
 let currentActiveLevel = null;
 
