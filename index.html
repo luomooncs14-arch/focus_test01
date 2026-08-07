@@ -4098,71 +4098,102 @@ function renderLineChart() {
         renderPersonalRanking();
     }
 
-    function renderPersonalRanking() {
-        const tbody = document.getElementById('personal-ranking-tbody');
-        const myRankEl = document.getElementById('my-rank-display');
-        const myScoreEl = document.getElementById('my-score-display');
-        if (!tbody) return;
+function renderPersonalRanking() {
+    const tbody = document.getElementById('personal-ranking-tbody');
+    const myRankEl = document.getElementById('my-rank-display');
+    const myScoreEl = document.getElementById('my-score-display');
+    if (!tbody) return;
 
-        // 取得資料來源 (優先讀取已載入的房間或歷史資料)
-        let baseRecords = [];
-        if (personalScope === 'room') {
-            baseRecords = (typeof roomGameRecords !== 'undefined') ? roomGameRecords : [];
-        } else {
-            baseRecords = (typeof allGameRecords !== 'undefined') ? allGameRecords : [];
-        }
+    // 1. 取得資料來源 (優先讀取房間/全體，若無則抓 LocalStorage)
+    let baseRecords = [];
+    if (personalScope === 'room' && typeof roomGameRecords !== 'undefined') {
+        baseRecords = roomGameRecords;
+    } else if (personalScope === 'all' && typeof allGameRecords !== 'undefined') {
+        baseRecords = allGameRecords;
+    }
 
-        // 若無遠端/房間資料，預設抓取 localHistory 的資料當作備用
-        if (baseRecords.length === 0) {
-            const raw = localStorage.getItem('focus_quiz_history');
+    // 若無遠端/房間資料，嘗試從 localStorage 抓取多個可能儲存的 key
+    if (!baseRecords || baseRecords.length === 0) {
+        const raw = localStorage.getItem('focus_quiz_history') || 
+                    localStorage.getItem('quiz_history') || 
+                    localStorage.getItem('gameHistory');
+        try {
             baseRecords = raw ? JSON.parse(raw) : [];
-        }
-
-        if (!baseRecords || baseRecords.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" style="padding:15px; color:#888;">暫無排行榜資料</td></tr>';
-            myRankEl.innerText = '--';
-            myScoreEl.innerText = '--';
-            return;
-        }
-
-        const getScore = (rec, metric) => {
-            if (metric === 'overall') return Number(rec.overallScore || rec.totalScore || 0);
-            return Number(rec.scores ? rec.scores[metric] : (rec['score' + metric] || 0));
-        };
-
-        const sortedList = [...baseRecords].sort((a, b) => getScore(b, personalMetric) - getScore(a, personalMetric));
-
-        tbody.innerHTML = '';
-        // 抓取目前玩家暱稱
-        const myName = (typeof App !== 'undefined' && App.getPlayerInfo) ? App.getPlayerInfo().name : '';
-
-        sortedList.forEach((item, index) => {
-            const score = getScore(item, personalMetric);
-            const rank = index + 1;
-            const itemName = item.name || item.nickname || '玩家';
-            const isMe = (myName && itemName === myName);
-
-            const tr = document.createElement('tr');
-            if (isMe) tr.style.background = '#e8f4f8';
-
-            tr.innerHTML = `
-                <td style="padding:6px; border-bottom:1px solid #eee;">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
-                <td style="padding:6px; border-bottom:1px solid #eee;">${itemName}${isMe ? ' (我)' : ''}</td>
-                <td style="padding:6px; border-bottom:1px solid #eee; font-weight:bold;">${score}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-
-        const myIndex = sortedList.findIndex(item => (item.name || item.nickname) === myName);
-        if (myIndex !== -1) {
-            myRankEl.innerText = `第 ${myIndex + 1} 名 / 共 ${sortedList.length} 人`;
-            myScoreEl.innerText = getScore(sortedList[myIndex], personalMetric);
-        } else {
-            myRankEl.innerText = '未上榜';
-            myScoreEl.innerText = '--';
+        } catch(e) {
+            baseRecords = [];
         }
     }
 
+    // 2. 如果目前剛做完測驗，但 baseRecords 是空的，強制把當前這把加入顯示
+    if ((!baseRecords || baseRecords.length === 0) && typeof displayedScores !== 'undefined') {
+        baseRecords = [{
+            name: (typeof App !== 'undefined' && App.getPlayerName) ? App.getPlayerName() : '我',
+            scores: displayedScores,
+            overallScore: Math.round(((displayedScores['1']||0) + (displayedScores['2']||0) + (displayedScores['3']||0) + (displayedScores['4']||0)) / 4)
+        }];
+    }
+
+    if (!baseRecords || baseRecords.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="padding:15px; color:#888;">暫無排行榜資料</td></tr>';
+        if (myRankEl) myRankEl.innerText = '--';
+        if (myScoreEl) myScoreEl.innerText = '--';
+        return;
+    }
+
+    // 計算分數輔助函式 (防呆相容各種欄位名)
+    const getScore = (rec, metric) => {
+        if (!rec) return 0;
+        if (metric === 'overall') {
+            if (rec.overallScore !== undefined) return Number(rec.overallScore);
+            if (rec.totalScore !== undefined) return Number(rec.totalScore);
+            // 若無總分，手動計算平均
+            const s = rec.scores || rec;
+            return Math.round(((Number(s['1']||s[0]||0)) + (Number(s['2']||s[1]||0)) + (Number(s['3']||s[2]||0)) + (Number(s['4']||s[3]||0))) / 4);
+        }
+        const s = rec.scores || rec;
+        return Number(s[metric] || s[Number(metric)-1] || rec['score' + metric] || 0);
+    };
+
+    const sortedList = [...baseRecords].sort((a, b) => getScore(b, personalMetric) - getScore(a, personalMetric));
+
+    tbody.innerHTML = '';
+    
+    // 安全取得玩家名稱
+    const myName = (typeof App !== 'undefined') 
+        ? (App.getPlayerInfo ? App.getPlayerInfo().name : (App.getPlayerName ? App.getPlayerName() : '')) 
+        : (window.currentPlayerName || '');
+
+    sortedList.forEach((item, index) => {
+        const score = getScore(item, personalMetric);
+        const rank = index + 1;
+        const itemName = item.name || item.nickname || '玩家';
+        const isMe = (myName && itemName === myName) || sortedList.length === 1;
+
+        const tr = document.createElement('tr');
+        if (isMe) tr.style.background = '#e8f4f8';
+
+        tr.innerHTML = `
+            <td style="padding:6px; border-bottom:1px solid #eee;">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
+            <td style="padding:6px; border-bottom:1px solid #eee;">${itemName}${isMe ? ' (我)' : ''}</td>
+            <td style="padding:6px; border-bottom:1px solid #eee; font-weight:bold;">${score}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+
+    // 更新底部「我的名次」
+    const myIndex = sortedList.findIndex(item => (item.name || item.nickname) === myName);
+    if (myIndex !== -1) {
+        if (myRankEl) myRankEl.innerText = `第 ${myIndex + 1} 名 / 共 ${sortedList.length} 人`;
+        if (myScoreEl) myScoreEl.innerText = getScore(sortedList[myIndex], personalMetric);
+    } else if (sortedList.length > 0) {
+        // 若找不對名稱，預設顯示第一筆或目前這筆
+        if (myRankEl) myRankEl.innerText = `第 1 名 / 共 ${sortedList.length} 人`;
+        if (myScoreEl) myScoreEl.innerText = getScore(sortedList[0], personalMetric);
+    } else {
+        if (myRankEl) myRankEl.innerText = '未上榜';
+        if (myScoreEl) myScoreEl.innerText = '--';
+    }
+}
  </script>
 </body>
 </html>
