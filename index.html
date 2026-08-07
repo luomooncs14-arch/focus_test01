@@ -1533,27 +1533,77 @@
         </section>
 
         <!-- ============ 綜合結果／雷達圖 ============ -->
-        <section id="page-results" class="page">
-            <div class="crate-card results-card">
-                <div id="backToHistoryRow" style="display:none; justify-content:flex-start; margin-bottom:10px;">
-                    <button class="btn-outline" style="margin:0;" onclick="App.showPage('results-zone')">◀ 返回結果專區</button>
-                </div>
-                <h2 style="text-align:center;">🏆 你的專注力雷達圖</h2>
-                <p style="text-align:center; margin-top:-6px;">四個關卡的表現已整合分析如下（滿分 100）</p>
+
+    <section id="page-results" class="page">
+    <div class="crate-card results-card">
+        <div id="backToHistoryRow" style="display:none; justify-content:flex-start; margin-bottom:10px;">
+            <button class="btn-outline" style="margin:0;" onclick="App.showPage('results-zone')">◀ 返回結果專區</button>
+        </div>
+        <h2 style="text-align:center;">🏆 你的專注力雷達圖與即時排名</h2>
+        <p style="text-align:center; margin-top:-6px;">四個關卡的表現已整合分析如下（滿分 100）</p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: stretch; margin: 20px 0;">
+
+            <div style="flex: 1; min-width: 300px; background: #fff8eb; padding: 15px; border-radius: 12px; border: 1px solid var(--kraft-border-light); text-align: center;">
+                <h3 style="color: var(--wood-dark); margin-top: 0;">專注力分析圖</h3>
                 <canvas id="radarCanvas" width="440" height="440" style="display:none;"></canvas>
-                <img id="radarImg" alt="專注力雷達圖" style="max-width:100%; width:440px; margin:0 auto; display:block; border-radius:12px; border:1px solid var(--kraft-border-light);">
-                <div class="radar-hint">💡 長按或點擊右鍵圖片即可保存到裝置</div>
-                <div class="score-list" id="scoreListEl"></div>
-                <div id="overallAdviceBox" class="home-lead-box" style="text-align:left;"></div>
-                <div class="btn-row">
-                    <button class="btn-secondary" onclick="App.downloadRadar()">長按保存結果</button>
-                    <button class="btn-primary" onclick="App.restartWholeQuiz()">再玩一次</button>
-                    <button class="btn-outline" onclick="App.shareResult()">🔗 分享給朋友</button>
-                </div>
-                <h2 style="margin-top:26px;">📋 各關卡詳細結果</h2>
-                <div id="levelDetailsBox"></div>
+                <img id="radarImg" alt="專注力雷達圖" style="max-width:100%; width:100%; margin:0 auto; display:block; border-radius:12px; border:1px solid var(--kraft-border-light);">
+                <div class="radar-hint" style="margin-top: 8px;">💡 長按或點擊右鍵圖片即可保存</div>
+                <div class="score-list" id="scoreListEl" style="margin-top: 10px;"></div>
             </div>
-        </section>
+
+            <div style="flex: 1.2; min-width: 320px; background: #ffffff; padding: 15px; border-radius: 12px; border: 1px solid var(--kraft-border-light); display: flex; flex-direction: column;">
+                
+                <h3 style="color: var(--wood-dark); margin: 0 0 10px 0; text-align: center;">🏆 即時排行榜</h3>
+
+                <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 8px;">
+                    <button type="button" id="btn-scope-room" class="btn-primary" style="font-size: 11px; padding: 4px 10px;" onclick="switchPersonalScope('room')">🏫 同房間玩家</button>
+                    <button type="button" id="btn-scope-all" class="btn-primary" style="font-size: 11px; padding: 4px 10px; background: gray;" onclick="switchPersonalScope('all')">🌐 全體玩家</button>
+                </div>
+
+                <div style="display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;">
+                    <button type="button" class="btn-outline btn-metric" data-metric="overall" style="font-size: 11px; padding: 2px 6px;" onclick="switchPersonalMetric('overall')">整體總分</button>
+                    <button type="button" class="btn-outline btn-metric" data-metric="1" style="font-size: 11px; padding: 2px 6px;" onclick="switchPersonalMetric('1')">穩定度</button>
+                    <button type="button" class="btn-outline btn-metric" data-metric="2" style="font-size: 11px; padding: 2px 6px;" onclick="switchPersonalMetric('2')">抗干擾</button>
+                    <button type="button" class="btn-outline btn-metric" data-metric="3" style="font-size: 11px; padding: 2px 6px;" onclick="switchPersonalMetric('3')">反應控制</button>
+                    <button type="button" class="btn-outline btn-metric" data-metric="4" style="font-size: 11px; padding: 2px 6px;" onclick="switchPersonalMetric('4')">記憶負荷</button>
+                </div>
+
+                <div style="flex: 1; max-height: 250px; overflow-y: auto; border: 1px solid var(--kraft-border-light); border-radius: 8px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: center;">
+                        <thead style="position: sticky; top: 0; background: var(--kraft-bg2); z-index: 1;">
+                            <tr>
+                                <th style="padding: 6px; border-bottom: 1px solid #ccc;">名次</th>
+                                <th style="padding: 6px; border-bottom: 1px solid #ccc;">暱稱</th>
+                                <th style="padding: 6px; border-bottom: 1px solid #ccc;">得分</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personal-ranking-tbody">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div style="margin-top: 10px; background: #fff3cd; border: 2px solid #ffeeba; border-radius: 8px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: var(--wood-dark);">
+                    <span>我的目前名次：<span id="my-rank-display" style="color: var(--accent-red); font-size: 16px;">--</span></span>
+                    <span>得分：<span id="my-score-display" style="color: #27ae60; font-size: 16px;">--</span> 分</span>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="overallAdviceBox" class="home-lead-box" style="text-align:left;"></div>
+
+        <div class="btn-row">
+            <button class="btn-secondary" onclick="App.downloadRadar()">長按保存結果</button>
+            <button class="btn-primary" onclick="App.restartWholeQuiz()">再玩一次</button>
+            <button class="btn-outline" onclick="App.shareResult()">🔗 分享給朋友</button>
+        </div>
+
+        <h2 style="margin-top:26px;">📋 各關卡詳細結果</h2>
+        <div id="levelDetailsBox"></div>
+    </div>
+</section>
+        
 
         <!-- ============ 結果專區 ============ -->
         <section id="page-results-zone" class="page">
@@ -1943,6 +1993,7 @@
         renderAdvice('overallAdviceBox', scores);
         renderLevelDetailsInto('levelDetailsBox', levelDetails);
         saveHistory();
+        renderPersonalRanking();
         }
 
         function renderScoreList(elId, sc){
@@ -4019,6 +4070,99 @@ function renderLineChart() {
     });
 }
     </script>
+<script>
+    // =========================================================================
+    // 排行榜切換與渲染邏輯
+    // =========================================================================
+    let personalScope = 'room';   // 'room' 或 'all'
+    let personalMetric = 'overall'; // 'overall', '1', '2', '3', '4'
 
+    function switchPersonalScope(scope) {
+        personalScope = scope;
+        document.getElementById('btn-scope-room').style.background = (scope === 'room') ? '' : 'gray';
+        document.getElementById('btn-scope-all').style.background = (scope === 'all') ? '' : 'gray';
+        renderPersonalRanking();
+    }
+
+    function switchPersonalMetric(metric) {
+        personalMetric = metric;
+        document.querySelectorAll('.btn-metric').forEach(btn => {
+            if (btn.getAttribute('data-metric') === metric) {
+                btn.style.background = 'var(--wood-dark)';
+                btn.style.color = '#fff';
+            } else {
+                btn.style.background = '';
+                btn.style.color = '';
+            }
+        });
+        renderPersonalRanking();
+    }
+
+    function renderPersonalRanking() {
+        const tbody = document.getElementById('personal-ranking-tbody');
+        const myRankEl = document.getElementById('my-rank-display');
+        const myScoreEl = document.getElementById('my-score-display');
+        if (!tbody) return;
+
+        // 取得資料來源 (優先讀取已載入的房間或歷史資料)
+        let baseRecords = [];
+        if (personalScope === 'room') {
+            baseRecords = (typeof roomGameRecords !== 'undefined') ? roomGameRecords : [];
+        } else {
+            baseRecords = (typeof allGameRecords !== 'undefined') ? allGameRecords : [];
+        }
+
+        // 若無遠端/房間資料，預設抓取 localHistory 的資料當作備用
+        if (baseRecords.length === 0) {
+            const raw = localStorage.getItem('focus_quiz_history');
+            baseRecords = raw ? JSON.parse(raw) : [];
+        }
+
+        if (!baseRecords || baseRecords.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" style="padding:15px; color:#888;">暫無排行榜資料</td></tr>';
+            myRankEl.innerText = '--';
+            myScoreEl.innerText = '--';
+            return;
+        }
+
+        const getScore = (rec, metric) => {
+            if (metric === 'overall') return Number(rec.overallScore || rec.totalScore || 0);
+            return Number(rec.scores ? rec.scores[metric] : (rec['score' + metric] || 0));
+        };
+
+        const sortedList = [...baseRecords].sort((a, b) => getScore(b, personalMetric) - getScore(a, personalMetric));
+
+        tbody.innerHTML = '';
+        // 抓取目前玩家暱稱
+        const myName = (typeof App !== 'undefined' && App.getPlayerInfo) ? App.getPlayerInfo().name : '';
+
+        sortedList.forEach((item, index) => {
+            const score = getScore(item, personalMetric);
+            const rank = index + 1;
+            const itemName = item.name || item.nickname || '玩家';
+            const isMe = (myName && itemName === myName);
+
+            const tr = document.createElement('tr');
+            if (isMe) tr.style.background = '#e8f4f8';
+
+            tr.innerHTML = `
+                <td style="padding:6px; border-bottom:1px solid #eee;">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}</td>
+                <td style="padding:6px; border-bottom:1px solid #eee;">${itemName}${isMe ? ' (我)' : ''}</td>
+                <td style="padding:6px; border-bottom:1px solid #eee; font-weight:bold;">${score}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        const myIndex = sortedList.findIndex(item => (item.name || item.nickname) === myName);
+        if (myIndex !== -1) {
+            myRankEl.innerText = `第 ${myIndex + 1} 名 / 共 ${sortedList.length} 人`;
+            myScoreEl.innerText = getScore(sortedList[myIndex], personalMetric);
+        } else {
+            myRankEl.innerText = '未上榜';
+            myScoreEl.innerText = '--';
+        }
+    }
+
+ </script>
 </body>
 </html>
